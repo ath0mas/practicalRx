@@ -44,7 +44,7 @@ public class UserProfileController {
     @RequestMapping(value = "/miner/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public DeferredResult<UserProfile> profile(@PathVariable int id) {
         DeferredResult<UserProfile> deferred = new DeferredResult<>(90000);
-        User user = userService.getUser(id);
+        User user = userService.getUser(id).toBlocking().firstOrDefault(null);
         if (user == null) {
             deferred.setErrorResult(new DogePoolException("Unknown miner", Error.UNKNOWN_USER, HttpStatus.NOT_FOUND));
             return deferred;
@@ -62,7 +62,7 @@ public class UserProfileController {
                 long rankByCoins = rankingService.rankByCoins(user);
                 long coins = coinService.totalCoinsMinedBy(user).toBlocking().first();
                 deferred.setResult(new UserProfile(user, hash, coins, avatarUrl, smallAvatarUrl,
-                                rankByHash, rankByCoins));
+                        rankByHash, rankByCoins));
                 return deferred;
             } else {
                 deferred.setErrorResult(new DogePoolException("Unable to get avatar info", Error.UNREACHABLE_SERVICE,
@@ -75,7 +75,7 @@ public class UserProfileController {
     @RequestMapping(value = "/miner/{id}", produces = MediaType.TEXT_HTML_VALUE)
     public DeferredResult<String> miner(Map<String, Object> model, @PathVariable int id) {
         DeferredResult<String> stringResponse = new DeferredResult<>(90000);
-        User user = userService.getUser(id);
+        User user = userService.getUser(id).toBlocking().firstOrDefault(null);
         if (user == null) {
             stringResponse.setErrorResult(new DogePoolException("Unknown miner", Error.UNKNOWN_USER, HttpStatus.NOT_FOUND));
             return stringResponse;

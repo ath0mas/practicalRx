@@ -33,7 +33,7 @@ public class StatService {
     private UserService userService;
 
     public List<UserStat> getAllStats() {
-        List<User> allUsers = userService.findAll();
+        List<User> allUsers = userService.findAll().toList().toBlocking().first();
         int userListSize = allUsers.size();
         final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
         for (User user : allUsers) {
@@ -52,7 +52,7 @@ public class StatService {
 
     public User lastBlockFoundBy() {
         Random rng = new Random(System.currentTimeMillis());
-        List<User> allUsers = userService.findAll();
+        List<User> allUsers = userService.findAll().toList().toBlocking().first();
         return allUsers.get(rng.nextInt(allUsers.size()));
     }
 }

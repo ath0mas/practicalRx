@@ -44,9 +44,8 @@ public class Main {
     CommandLineRunner commandLineRunner(UserService userService, RankingService rankinService,
             PoolService poolService, ExchangeRateService exchangeRateService) {
         return args -> {
-            User user = userService.getUser(0);
             //connect USER automatically
-            boolean connected = poolService.connectUser(user).toBlocking().first();
+            boolean connected = userService.getUser(0).flatMap(u -> poolService.connectUser(u)).toBlocking().first();
 
             //gather data
             List<UserStat> hashLadder = rankinService.getLadderByHashrate();
