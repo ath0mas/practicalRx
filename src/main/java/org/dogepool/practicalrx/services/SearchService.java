@@ -51,24 +51,12 @@ public class SearchService {
 
         List<User> allUsers = userService.findAll();
         int userListSize = allUsers.size();
-        CountDownLatch latch = new CountDownLatch(userListSize);
         final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
         for (User user : allUsers) {
-            coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
-                @Override
-                public void onSuccess(Long coins) {
-                    if (coins >= minCoins && (maxCoins < 0 || coins <= maxCoins)) {
-                        result.add(new UserStat(user, -1d, coins));
-                    }
-                    latch.countDown();
-                }
-            });
-
-        }
-        try {
-            latch.await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            long coins = coinService.totalCoinsMinedBy(user).toBlocking().first();
+            if (coins >= minCoins && (maxCoins < 0 || coins <= maxCoins)) {
+                result.add(new UserStat(user, -1d, coins));
+            }
         }
         return result;
     }

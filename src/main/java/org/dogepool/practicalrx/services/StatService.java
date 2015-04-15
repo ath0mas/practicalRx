@@ -35,24 +35,12 @@ public class StatService {
     public List<UserStat> getAllStats() {
         List<User> allUsers = userService.findAll();
         int userListSize = allUsers.size();
-        CountDownLatch latch = new CountDownLatch(userListSize);
         final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
         for (User user : allUsers) {
-            double hashRateForUser = hashrateService.hashrateFor(user);
-            coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
-                @Override
-                public void onSuccess(Long totalCoinsMinedByUser) {
-                    UserStat userStat = new UserStat(user, hashRateForUser, totalCoinsMinedByUser);
-                    result.add(userStat);
-                    latch.countDown();
-                }
-            });
-
-        }
-        try {
-            latch.await(10,TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new DogePoolException("Timeout when getting coin stats", Error.RANK_COIN, HttpStatus.REQUEST_TIMEOUT, e);
+            double hashRateForUser = hashrateService.hashrateFor(user).toBlocking().first();
+            long totalCoinsMinedByUser = coinService.totalCoinsMinedBy(user).toBlocking().first();
+            UserStat userStat = new UserStat(user, hashRateForUser, totalCoinsMinedByUser);
+            result.add(userStat);
         }
         return result;
     }
