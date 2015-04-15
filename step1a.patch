@@ -1,0 +1,172 @@
+Index: src/main/java/org/dogepool/practicalrx/services/AdminService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/AdminService.java	(date 1429138989000)
++++ src/main/java/org/dogepool/practicalrx/services/AdminService.java	(date 1429139845000)
+@@ -5,6 +5,7 @@
+ import java.time.Month;
+ 
+ import org.springframework.stereotype.Service;
++import rx.Observable;
+ 
+ /**
+  * Service for administrative purpose like tracking operational costs.
+@@ -12,18 +13,17 @@
+ @Service
+ public class AdminService {
+ 
+-    public BigInteger costForMonth(int year, Month month) {
+-        LocalDate now = LocalDate.now();
+-
++    public Observable<BigInteger> costForMonth(int year, Month month) {
++        return Observable.just(LocalDate.now())
++                .map(now -> {
+-        if (year == now.getYear() && month == now.getMonth()) {
+-            return BigInteger.ZERO;
+-        }
+-        if (year > now.getYear()
+-            || year == now.getYear() && month.getValue() > now.getMonthValue()) {
+-            return BigInteger.ZERO;
+-        }
++                    if (year == now.getYear() && month == now.getMonth()) {
++                        return BigInteger.ZERO;
++                    }
++                    if (year > now.getYear()
++                            || year == now.getYear() && month.getValue() > now.getMonthValue()) {
++                        return BigInteger.ZERO;
++                    }
+-        return BigInteger.valueOf(
+-                year +
+-                month.getValue() * 100);
++                    return BigInteger.valueOf(year + month.getValue() * 100);
++                });
+     }
+ }
+Index: src/main/java/org/dogepool/practicalrx/services/CoinService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/CoinService.java	(date 1429138989000)
++++ src/main/java/org/dogepool/practicalrx/services/CoinService.java	(date 1429139845000)
+@@ -2,6 +2,7 @@
+ 
+ import org.dogepool.practicalrx.domain.User;
+ import org.springframework.stereotype.Service;
++import rx.Observable;
+ 
+ /**
+  * Service for getting info on coins mined by users.
+@@ -9,19 +10,12 @@
+ @Service
+ public class CoinService {
+ 
+-    public void totalCoinsMinedBy(User user, ServiceCallback<Long> callback) {
+-        Thread t = new Thread(new Runnable() {
+-            @Override
+-            public void run() {
+-                Long coins;
++    public Observable<Long> totalCoinsMinedBy(User user) {
+-                if (user.equals(User.OTHERUSER)) {
++        if (user.equals(User.OTHERUSER)) {
+-                    coins = 12L;
++            return Observable.just(12L);
+-                } else {
++        } else {
+-                    coins = 0L;
++            return Observable.just(0L);
+-                }
++        }
+-                callback.onSuccess(coins);
+-            }
+-        });
+-        t.start();
++        //TODO how to reintroduce notion of threading?
+     }
+ }
+Index: src/main/java/org/dogepool/practicalrx/services/HashrateService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/HashrateService.java	(date 1429138989000)
++++ src/main/java/org/dogepool/practicalrx/services/HashrateService.java	(date 1429139845000)
+@@ -2,6 +2,7 @@
+ 
+ import org.dogepool.practicalrx.domain.User;
+ import org.springframework.stereotype.Service;
++import rx.Observable;
+ 
+ /**
+  * Service to retrieve hashrate information of users.
+@@ -13,10 +14,11 @@
+      * @param user
+      * @return the last known gigahash/sec hashrate for the given user
+      */
+-    public double hashrateFor(User user) {
++    public Observable<Double> hashrateFor(User user) {
+         if (user.equals(User.USER)) {
+-            return 1.234;
++            return Observable.just(1.234);
+         }
+-        return user.displayName.length() / 100d;
++        return Observable.just(user.displayName)
++                         .map(s -> s.length() / 100d);
+     }
+ }
+Index: src/main/java/org/dogepool/practicalrx/services/PoolService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/PoolService.java	(date 1429138989000)
++++ src/main/java/org/dogepool/practicalrx/services/PoolService.java	(date 1429139845000)
+@@ -9,6 +9,7 @@
+ import org.dogepool.practicalrx.domain.User;
+ import org.springframework.beans.factory.annotation.Autowired;
+ import org.springframework.stereotype.Service;
++import rx.Observable;
+ 
+ /**
+  * Service to retrieve information on the current status of the mining pool
+@@ -25,8 +26,8 @@
+ 
+     private final Set<User> connectedUsers = new HashSet<>();
+ 
+-    public List<User> miningUsers() {
+-        return new ArrayList<>(connectedUsers);
++    public Observable<User> miningUsers() {
++        return Observable.from(connectedUsers);
+     }
+ 
+     public double poolGigaHashrate() {
+@@ -38,15 +39,19 @@
+         return hashrate;
+     }
+ 
+-    public boolean connectUser(User user) {
++    public Observable<Boolean> connectUser(User user) {
++        return Observable.<Boolean>create(s -> {
+-        connectedUsers.add(user);
++            connectedUsers.add(user);
+-        System.out.println(connectedUsers);
+-        return true;
++            s.onNext(Boolean.TRUE);
++            s.onCompleted();
++        });
+     }
+ 
+-    public boolean disconnectUser(User user) {
++    public Observable<Boolean> disconnectUser(User user) {
++        return Observable.<Boolean>create(s -> {
+-        connectedUsers.remove(user);
++            connectedUsers.remove(user);
+-        System.out.println(connectedUsers);
+-        return true;
++            s.onNext(Boolean.TRUE);
++            s.onCompleted();
++        });
+     }
+ }

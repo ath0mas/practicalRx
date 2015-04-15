@@ -1,0 +1,309 @@
+Index: src/main/java/org/dogepool/practicalrx/Main.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/Main.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/Main.java	(date 1429140861000)
+@@ -46,13 +46,13 @@
+         return args -> {
+             User user = userService.getUser(0);
+             //connect USER automatically
+-            boolean connected = poolService.connectUser(user);
++            boolean connected = poolService.connectUser(user).toBlocking().first();
+ 
+             //gather data
+             List<UserStat> hashLadder = rankinService.getLadderByHashrate();
+             List<UserStat> coinsLadder = rankinService.getLadderByCoins();
+             String poolName = poolService.poolName();
+-            int miningUserCount = poolService.miningUsers().size();
++            int miningUserCount = poolService.miningUsers().count().toBlocking().first();
+             double poolRate = poolService.poolGigaHashrate();
+ 
+             //display welcome screen in console
+Index: src/main/java/org/dogepool/practicalrx/controllers/AdminController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/controllers/AdminController.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/controllers/AdminController.java	(date 1429140861000)
+@@ -39,8 +39,8 @@
+     public ResponseEntity<Object> registerMiningUser(@PathVariable("id") long id) {
+         User user = userService.getUser(id);
+         if (user != null) {
+-            boolean connected = poolService.connectUser(user);
+-            List<User> miningUsers = poolService.miningUsers();
++            boolean connected = poolService.connectUser(user).toBlocking().first();
++            List<User> miningUsers = poolService.miningUsers().toList().toBlocking().first();
+             return new ResponseEntity<>(miningUsers, HttpStatus.ACCEPTED);
+         } else {
+             throw new DogePoolException("User cannot mine, not authenticated", Error.BAD_USER, HttpStatus.NOT_FOUND);
+@@ -51,8 +51,8 @@
+     public ResponseEntity<Object> deregisterMiningUser(@PathVariable("id") long id) {
+         User user = userService.getUser(id);
+         if (user != null) {
+-            boolean disconnected = poolService.disconnectUser(user);
+-            List<User> miningUsers = poolService.miningUsers();
++            boolean disconnected = poolService.disconnectUser(user).toBlocking().first();
++            List<User> miningUsers = poolService.miningUsers().toList().toBlocking().first();
+             return new ResponseEntity<>(miningUsers, HttpStatus.ACCEPTED);
+         } else {
+             throw new DogePoolException("User is not mining, not authenticated", Error.BAD_USER, HttpStatus.NOT_FOUND);
+@@ -73,7 +73,7 @@
+ 
+     @RequestMapping("/cost/{year}/{month}")
+     protected Map<String, Object> cost(@PathVariable int year, @PathVariable Month month) {
+-        BigInteger cost = adminService.costForMonth(year, month);
++        BigInteger cost = adminService.costForMonth(year, month).toBlocking().first();
+ 
+         Map<String, Object> json = new HashMap<>();
+         json.put("month", month + " " + year);
+Index: src/main/java/org/dogepool/practicalrx/controllers/IndexController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/controllers/IndexController.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/controllers/IndexController.java	(date 1429140861000)
+@@ -33,7 +33,7 @@
+         idxModel.setHashLadder(rankService.getLadderByHashrate());
+         idxModel.setCoinsLadder(rankService.getLadderByCoins());
+         idxModel.setPoolName(poolService.poolName());
+-        idxModel.setMiningUserCount(poolService.miningUsers().size());
++        idxModel.setMiningUserCount(poolService.miningUsers().count().toBlocking().first());
+         idxModel.setGigaHashrate(poolService.poolGigaHashrate());
+         try {
+             Double dogeToDollar = exchangeRateService.dogeToCurrencyExchangeRate("USD");
+Index: src/main/java/org/dogepool/practicalrx/controllers/PoolController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/controllers/PoolController.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/controllers/PoolController.java	(date 1429140861000)
+@@ -61,7 +61,7 @@
+     @RequestMapping("/miners")
+     public Map<String, Object> miners() {
+         int allUsers = userService.findAll().size();
+-        int miningUsers = poolService.miningUsers().size();
++        int miningUsers = poolService.miningUsers().count().toBlocking().first();
+         Map<String, Object> json = new HashMap<>(2);
+         json.put("totalUsers", allUsers);
+         json.put("totalMiningUsers", miningUsers);
+@@ -70,7 +70,7 @@
+ 
+     @RequestMapping("/miners/active")
+     public List<User> activeMiners() {
+-        return poolService.miningUsers();
++        return poolService.miningUsers().toList().toBlocking().first();
+     }
+ 
+     @RequestMapping("/lastblock")
+Index: src/main/java/org/dogepool/practicalrx/controllers/UserProfileController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/controllers/UserProfileController.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/controllers/UserProfileController.java	(date 1429140861000)
+@@ -57,17 +57,12 @@
+                 String smallAvatarUrl = (String) avatarInfo.get("small");
+ 
+                 //complete with other information
+-                double hash = hashrateService.hashrateFor(user);
++                double hash = hashrateService.hashrateFor(user).toBlocking().first();
+                 long rankByHash = rankingService.rankByHashrate(user);
+                 long rankByCoins = rankingService.rankByCoins(user);
+-                coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
+-                    @Override
+-                    public void onSuccess(Long coins) {
++                long coins = coinService.totalCoinsMinedBy(user).toBlocking().first();
+-                        deferred.setResult(new UserProfile(user, hash, coins, avatarUrl, smallAvatarUrl,
++                deferred.setResult(new UserProfile(user, hash, coins, avatarUrl, smallAvatarUrl,
+                                 rankByHash, rankByCoins));
+-                    }
+-                });
+-
+                 return deferred;
+             } else {
+                 deferred.setErrorResult(new DogePoolException("Unable to get avatar info", Error.UNREACHABLE_SERVICE,
+@@ -93,26 +88,21 @@
+                 String smallAvatarUrl = (String) avatarInfo.get("small");
+ 
+                 //complete with other information
+-                double hash = hashrateService.hashrateFor(user);
++                double hash = hashrateService.hashrateFor(user).toBlocking().first();
+                 long rankByHash = rankingService.rankByHashrate(user);
+                 long rankByCoins = rankingService.rankByCoins(user);
+-                coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
+-                    @Override
+-                    public void onSuccess(Long coins) {
++                long coins = coinService.totalCoinsMinedBy(user).toBlocking().first();
+                         UserProfile profile = new UserProfile(user, hash, coins, avatarUrl, smallAvatarUrl, rankByHash, rankByCoins);
+-                        User user = profile.user;
+-                        MinerModel minerModel = new MinerModel();
+-                        minerModel.setAvatarUrl(profile.avatarUrl);
+-                        minerModel.setSmallAvatarUrl(profile.smallAvatarUrl);
+-                        minerModel.setBio(user.bio);
+-                        minerModel.setDisplayName(user.displayName);
+-                        minerModel.setNickname(user.nickname);
+-                        minerModel.setRankByCoins(profile.rankByCoins);
+-                        minerModel.setRankByHash(profile.rankByHash);
+-                        model.put("minerModel", minerModel);
+-                        stringResponse.setResult("miner");
++                MinerModel minerModel = new MinerModel();
++                minerModel.setAvatarUrl(profile.avatarUrl);
++                minerModel.setSmallAvatarUrl(profile.smallAvatarUrl);
++                minerModel.setBio(user.bio);
++                minerModel.setDisplayName(user.displayName);
++                minerModel.setNickname(user.nickname);
++                minerModel.setRankByCoins(profile.rankByCoins);
++                minerModel.setRankByHash(profile.rankByHash);
++                model.put("minerModel", minerModel);
++                stringResponse.setResult("miner");
+-                    }
+-                });
+ 
+                 return stringResponse;
+             } else {
+Index: src/main/java/org/dogepool/practicalrx/services/PoolService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/PoolService.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/services/PoolService.java	(date 1429140861000)
+@@ -32,8 +32,8 @@
+ 
+     public double poolGigaHashrate() {
+         double hashrate = 0d;
+-        for (User u : miningUsers()) {
+-            double userRate = hashrateService.hashrateFor(u);
++        for (User u : miningUsers().toList().toBlocking().first()) {
++            double userRate = hashrateService.hashrateFor(u).toBlocking().first();
+             hashrate += userRate;
+         }
+         return hashrate;
+Index: src/main/java/org/dogepool/practicalrx/services/SearchService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/SearchService.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/services/SearchService.java	(date 1429140861000)
+@@ -51,24 +51,12 @@
+ 
+         List<User> allUsers = userService.findAll();
+         int userListSize = allUsers.size();
+-        CountDownLatch latch = new CountDownLatch(userListSize);
+         final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
+         for (User user : allUsers) {
+-            coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
+-                @Override
+-                public void onSuccess(Long coins) {
++            long coins = coinService.totalCoinsMinedBy(user).toBlocking().first();
+-                    if (coins >= minCoins && (maxCoins < 0 || coins <= maxCoins)) {
+-                        result.add(new UserStat(user, -1d, coins));
+-                    }
++            if (coins >= minCoins && (maxCoins < 0 || coins <= maxCoins)) {
++                result.add(new UserStat(user, -1d, coins));
++            }
+-                    latch.countDown();
+-                }
+-            });
+-
+-        }
+-        try {
+-            latch.await(10, TimeUnit.SECONDS);
+-        } catch (InterruptedException e) {
+-            throw new RuntimeException(e);
+         }
+         return result;
+     }
+Index: src/main/java/org/dogepool/practicalrx/services/StatService.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/main/java/org/dogepool/practicalrx/services/StatService.java	(date 1429139845000)
++++ src/main/java/org/dogepool/practicalrx/services/StatService.java	(date 1429140861000)
+@@ -35,24 +35,12 @@
+     public List<UserStat> getAllStats() {
+         List<User> allUsers = userService.findAll();
+         int userListSize = allUsers.size();
+-        CountDownLatch latch = new CountDownLatch(userListSize);
+         final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
+         for (User user : allUsers) {
+-            double hashRateForUser = hashrateService.hashrateFor(user);
+-            coinService.totalCoinsMinedBy(user, new ServiceCallback<Long>() {
+-                @Override
+-                public void onSuccess(Long totalCoinsMinedByUser) {
++            double hashRateForUser = hashrateService.hashrateFor(user).toBlocking().first();
++            long totalCoinsMinedByUser = coinService.totalCoinsMinedBy(user).toBlocking().first();
+-                    UserStat userStat = new UserStat(user, hashRateForUser, totalCoinsMinedByUser);
+-                    result.add(userStat);
++            UserStat userStat = new UserStat(user, hashRateForUser, totalCoinsMinedByUser);
++            result.add(userStat);
+-                    latch.countDown();
+-                }
+-            });
+-
+-        }
+-        try {
+-            latch.await(10,TimeUnit.SECONDS);
+-        } catch (InterruptedException e) {
+-            throw new DogePoolException("Timeout when getting coin stats", Error.RANK_COIN, HttpStatus.REQUEST_TIMEOUT, e);
+         }
+         return result;
+     }
+Index: src/test/java/org/dogepool/practicalrx/controllers/AdminControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/org/dogepool/practicalrx/controllers/AdminControllerTest.java	(date 1429139845000)
++++ src/test/java/org/dogepool/practicalrx/controllers/AdminControllerTest.java	(date 1429140861000)
+@@ -80,10 +80,10 @@
+ 
+     @Test
+     public void testCostMonthName() throws Exception {
+-        mockMvc.perform(get("/admin/cost/2015/APRIL"))
++        mockMvc.perform(get("/admin/cost/2015/JANUARY"))
+                 .andExpect(status().isOk())
+                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+-                .andExpect(content().json("{\"cost\":2415,\"month\":\"APRIL 2015\"," +
++                .andExpect(content().json("{\"cost\":2115,\"month\":\"JANUARY 2015\"," +
+                         "\"currencySign\":\"$\",\"currency\":\"USD\"}"));
+     }
+ 
+@@ -95,10 +95,10 @@
+ 
+     @Test
+     public void testCostMonthNumber() throws Exception {
+-        mockMvc.perform(get("/admin/cost/2015-04"))
++        mockMvc.perform(get("/admin/cost/2015-01"))
+                 .andExpect(status().isOk())
+                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+-                .andExpect(content().json("{\"cost\":2415,\"month\":\"APRIL 2015\"," +
++                .andExpect(content().json("{\"cost\":2115,\"month\":\"JANUARY 2015\"," +
+                         "\"currencySign\":\"$\",\"currency\":\"USD\"}"));
+     }
+ }
+\ No newline at end of file
+Index: src/test/java/org/dogepool/practicalrx/controllers/IndexControllerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/test/java/org/dogepool/practicalrx/controllers/IndexControllerTest.java	(date 1429139845000)
++++ src/test/java/org/dogepool/practicalrx/controllers/IndexControllerTest.java	(date 1429140861000)
+@@ -39,6 +39,6 @@
+         mockMvc.perform(get("/"))
+                 .andExpect(status().isOk())
+                 .andExpect(model().attributeHasNoErrors("model"))
+-                .andExpect(content().contentType(MediaType.TEXT_HTML));
++                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML));
+     }
+ }
+\ No newline at end of file
