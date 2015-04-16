@@ -2,20 +2,14 @@ package org.dogepool.practicalrx.services;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.dogepool.practicalrx.domain.User;
 import org.dogepool.practicalrx.domain.UserStat;
-import org.dogepool.practicalrx.error.*;
-import org.dogepool.practicalrx.error.Error;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import rx.Observable;
 
 /**
  * Service to get stats on the pool, like top 10 ladders for various criteria.
@@ -32,17 +26,14 @@ public class StatService {
     @Autowired
     private UserService userService;
 
-    public List<UserStat> getAllStats() {
-        List<User> allUsers = userService.findAll().toList().toBlocking().first();
-        int userListSize = allUsers.size();
-        final List<UserStat> result = Collections.synchronizedList(new ArrayList<>(userListSize));
-        for (User user : allUsers) {
-            double hashRateForUser = hashrateService.hashrateFor(user).toBlocking().first();
-            long totalCoinsMinedByUser = coinService.totalCoinsMinedBy(user).toBlocking().first();
-            UserStat userStat = new UserStat(user, hashRateForUser, totalCoinsMinedByUser);
-            result.add(userStat);
-        }
-        return result;
+    public Observable<UserStat> getAllStats() {
+        return userService.findAll()
+                          .flatMap(u -> {
+                              Observable<Double> hr = hashrateService.hashrateFor(u);
+                              Observable<Long> co = coinService.totalCoinsMinedBy(u);
+
+                              return Observable.zip(hr, co, (rate, coin) -> new UserStat(u, rate, coin));
+                          });
     }
 
     public LocalDateTime lastBlockFoundDate() {
