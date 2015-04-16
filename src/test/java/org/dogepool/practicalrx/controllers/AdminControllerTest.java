@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.dogepool.practicalrx.Main;
+import org.dogepool.practicalrx.services.AdminService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,6 +30,9 @@ public class AdminControllerTest {
 
     @Autowired
     private WebApplicationContext webApplicationContext;
+
+    @Autowired
+    private AdminService adminService;
 
     private MockMvc mockMvc;
 
@@ -72,6 +76,20 @@ public class AdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().string(containsString("\"cost\"")))
+                .andExpect(content().string(containsString("\"month\"")))
+                .andExpect(content().string(containsString("\"currency\"")))
+                .andExpect(content().string(containsString("\"currencySign\"")));
+
+    }
+
+    @Test
+    public void testCostUseCurrent() throws Exception {
+        adminService.addCost(1234);
+
+        mockMvc.perform(get("/admin/cost/"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().string(containsString("\"cost\":1234")))
                 .andExpect(content().string(containsString("\"month\"")))
                 .andExpect(content().string(containsString("\"currency\"")))
                 .andExpect(content().string(containsString("\"currencySign\"")));
