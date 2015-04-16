@@ -36,13 +36,13 @@ public class IndexController {
         idxModel.setMiningUserCount(poolService.miningUsers().count().toBlocking().first());
         idxModel.setGigaHashrate(poolService.poolGigaHashrate().toBlocking().first());
         try {
-            Double dogeToDollar = exchangeRateService.dogeToCurrencyExchangeRate("USD");
+            Double dogeToDollar = exchangeRateService.dogeToCurrencyExchangeRate("USD").toBlocking().single();
             idxModel.setDogeToUsdMessage("1 DOGE = " + dogeToDollar + "$");
         } catch (Exception e) {
             idxModel.setDogeToUsdMessage("1 DOGE = ??$, couldn't get the exchange rate - " + e.getMessage());
         }
         try {
-            Double dogeToEuro = exchangeRateService.dogeToCurrencyExchangeRate("EUR");
+            Double dogeToEuro = exchangeRateService.dogeToCurrencyExchangeRate("EUR").toBlocking().single();
             idxModel.setDogeToEurMessage("1 DOGE = " + dogeToEuro + "€");
         } catch (Exception e) {
             idxModel.setDogeToEurMessage("1 DOGE = ??€, couldn't get the exchange rate - " + e.getMessage());

@@ -59,18 +59,14 @@ public class Main {
             System.out.println(miningUserCount + " users currently mining, for a global hashrate of "
                     + poolRate + " GHash/s");
 
-            try {
-                Double dogeToDollar = exchangeRateService.dogeToCurrencyExchangeRate("USD");
-                System.out.println("1 DOGE = " + dogeToDollar + "$");
-            } catch (Exception e) {
-                System.out.println("1 DOGE = ??$, couldn't get the exchange rate - " + e);
-            }
-            try {
-                Double dogeToEuro =  exchangeRateService.dogeToCurrencyExchangeRate("EUR");
-                System.out.println("1 DOGE = " + dogeToEuro + "€");
-            } catch (Exception e) {
-                System.out.println("1 DOGE = ??€, couldn't get the exchange rate - " + e);
-            }
+            exchangeRateService.dogeToCurrencyExchangeRate("USD").subscribe(
+                    r -> System.out.println("1 DOGE = " + r + "$"),
+                    e -> System.out.println("1 DOGE = ??$, couldn't get the exchange rate - " + e)
+            );
+            exchangeRateService.dogeToCurrencyExchangeRate("EUR").subscribe(
+                    r -> System.out.println("1 DOGE = " + r + "€"),
+                    e -> System.out.println("1 DOGE = ??€, couldn't get the exchange rate - " + e)
+            );
 
             System.out.println("\n----- TOP 10 Miners by Hashrate -----");
             int count = 1;
