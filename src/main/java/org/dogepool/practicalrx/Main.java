@@ -48,8 +48,8 @@ public class Main {
             boolean connected = userService.getUser(0).flatMap(u -> poolService.connectUser(u)).toBlocking().first();
 
             //gather data
-            List<UserStat> hashLadder = rankinService.getLadderByHashrate();
-            List<UserStat> coinsLadder = rankinService.getLadderByCoins();
+            List<UserStat> hashLadder = rankinService.getLadderByHashrate().toList().toBlocking().single();
+            List<UserStat> coinsLadder = rankinService.getLadderByCoins().toList().toBlocking().single();
             String poolName = poolService.poolName();
             int miningUserCount = poolService.miningUsers().count().toBlocking().first();
             double poolRate = poolService.poolGigaHashrate().toBlocking().first();
